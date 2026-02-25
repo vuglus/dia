@@ -1,3 +1,5 @@
 .venv
 config.yml
 files
+__pycache__/
+test/

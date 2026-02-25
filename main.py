@@ -5,17 +5,22 @@ import yaml
 from pipline.diarization import perform_diarization, save_diarization_result
 
 def load_config():
-    with open("config.yml", "r", encoding="utf-8") as f:
+    # Get the directory where this script is located
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    config_path = os.path.join(script_dir, "config.yml")
+    with open(config_path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
+
 
 def main():
     config = load_config()
     file_path = sys.argv[1] if len(sys.argv) > 1 else None
+    print(f"Processing file: {file_path}")
     if not file_path:
         print("Usage: python main.py <path-to-mp3>")
         sys.exit(1)
 
-    base = os.path.splitext(file_path)[0]    
+    base = os.path.splitext(file_path)[0]
     # 1. Выполняем диаризацию
     diarization_result = perform_diarization(file_path, config)
     

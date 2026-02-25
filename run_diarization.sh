@@ -3,6 +3,9 @@
 # Script to run diarization in the background under WSL
 # Usage: ./run_diarization.sh <path-to-mp3>
 
+# Get the directory where the script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # Function to convert Windows path to WSL path
 convert_path() {
     local input_path="$1"
@@ -35,13 +38,15 @@ if [ ! -f "$INPUT_FILE" ]; then
     exit 1
 fi
 
-# Run diarization in background
-nohup python main.py "$INPUT_FILE" > diarization.log 2>&1 &
+# Get the directory of the input file
+INPUT_DIR=$(dirname "$INPUT_FILE")
+INPUT_BASENAME=$(basename "$INPUT_FILE")
+LOG_FILE="$INPUT_DIR/diarization.log"
 
-# Capture the process ID
-PID=$!
-
-echo "Diarization started in background with PID: $PID"
 echo "Processing file: $INPUT_FILE"
-echo "Logs are being written to diarization.log"
-echo "Use 'tail -f diarization.log' to monitor progress"
+# Activate virtual environment using absolute path
+source "$SCRIPT_DIR/.venv/bin/activate"
+
+# Run diarization in background with absolute path to main.py
+python "$SCRIPT_DIR/main.py" "$INPUT_FILE" > "$LOG_FILE" 2>&1 
+

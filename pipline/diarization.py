@@ -50,5 +50,11 @@ def save_diarization_result(result, output_path):
         output_path (str): Path to save the .dia file
     """
     with open(output_path, 'w', encoding='utf-8') as f:
+        # Create a mapping from original speaker labels to sequential numbers starting from 1
+        unique_speakers = sorted(set(speaker for _, speaker in result.speaker_diarization))
+        speaker_mapping = {speaker: f"SPEAKER_{i+1:02d}" for i, speaker in enumerate(unique_speakers)}
+        
         for turn, speaker in result.speaker_diarization:
-            f.write(f"{turn.start:.3f} {turn.end:.3f} {speaker}\n")
+            # Map the original speaker label to the new sequential label
+            new_speaker = speaker_mapping[speaker]
+            f.write(f"{turn.start:.3f} {turn.end:.3f} {new_speaker}\n")

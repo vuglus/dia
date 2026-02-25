@@ -1,29 +1,33 @@
-# PowerShell script to run diamix.py with automatic .dia file detection
-# Usage: .\run_diamix.ps1 -TxtFile "path\to\file.txt"
+# PowerShell script to run diamix.py with specified .dia and .txt files
+# Usage: .\run_diamix.ps1 -TxtFile "path\to\file.txt" -DiaFile "path\to\file.dia"
 
 param(
     [Parameter(Mandatory=$true)]
-    [string]$TxtFile
+    [string]$TxtFile,
+    
+    [Parameter(Mandatory=$true)]
+    [string]$DiaFile
 )
 
-# Get the directory and base name of the txt file
+# Get the paths
 $TxtPath = Resolve-Path $TxtFile
-$TxtDir = Split-Path $TxtPath -Parent
-$TxtBaseName = [System.IO.Path]::GetFileNameWithoutExtension($TxtPath)
+$DiaPath = Resolve-Path $DiaFile
 
-Write-Host "Processing file: $TxtPath"
-
-# Look for corresponding .dia file in the same directory
-$DiaFile = Join-Path $TxtDir "$TxtBaseName.dia"
+Write-Host "Processing files:"
+Write-Host "  TXT: $TxtPath"
+Write-Host "  DIA: $DiaPath"
 
 # Check if .dia file exists
-if (-not (Test-Path $DiaFile)) {
-    Write-Error "No corresponding .dia file found for $TxtFile"
-    Write-Host "Expected file: $DiaFile"
+if (-not (Test-Path $DiaPath)) {
+    Write-Error "Specified .dia file not found: $DiaPath"
     exit 1
 }
 
-Write-Host "Found .dia file: $DiaFile"
+# Check if .txt file exists
+if (-not (Test-Path $TxtPath)) {
+    Write-Error "Specified .txt file not found: $TxtPath"
+    exit 1
+}
 
 # Get the directory where this script is located (where diamix.py should be)
 $ScriptDir = Split-Path $MyInvocation.MyCommand.Path -Parent
@@ -46,9 +50,9 @@ if (Test-Path $VenvActivate) {
     Write-Host "No virtual environment found, using system Python"
 }
 
-# Run diamix.py with the found files
-Write-Host "Running: python $DiamixPy $DiaFile $TxtPath -o $TxtPath"
-python $DiamixPy $DiaFile $TxtPath -o $TxtPath
+# Run diamix.py with the specified files
+Write-Host "Running: python $DiamixPy $DiaPath $TxtPath -o $TxtPath"
+python $DiamixPy $DiaPath $TxtPath -o $TxtPath
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "Successfully updated speakers in $TxtFile" -ForegroundColor Green
