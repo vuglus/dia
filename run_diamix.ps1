@@ -10,8 +10,19 @@ param(
 )
 
 # Get the paths
-$TxtPath = Resolve-Path $TxtFile
-$DiaPath = Resolve-Path $DiaFile
+try {
+    $TxtPath = Resolve-Path $TxtFile | Select-Object -ExpandProperty Path
+} catch {
+    Write-Error "Cannot resolve path for TXT file: $TxtFile"
+    exit 1
+}
+
+try {
+    $DiaPath = Resolve-Path $DiaFile | Select-Object -ExpandProperty Path
+} catch {
+    Write-Error "Cannot resolve path for DIA file: $DiaFile"
+    exit 1
+}
 
 Write-Host "Processing files:"
 Write-Host "  TXT: $TxtPath"

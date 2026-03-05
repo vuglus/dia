@@ -30,6 +30,8 @@ def perform_diarization(file_path, config):
         config['dia']['model'], 
         token=config['dia']["token"]
     )
+    
+    # Check if CUDA is available and move pipeline to GPU
     pipeline.to(torch.device("cuda"))
     # Load audio with torchaudio to avoid torchcodec issues
     waveform, sample_rate = torchaudio.load(file_path)
@@ -50,11 +52,22 @@ def save_diarization_result(result, output_path):
         output_path (str): Path to save the .dia file
     """
     with open(output_path, 'w', encoding='utf-8') as f:
-        # Create a mapping from original speaker labels to sequential numbers starting from 1
-        unique_speakers = sorted(set(speaker for _, speaker in result.speaker_diarization))
-        speaker_mapping = {speaker: f"SPEAKER_{i+1:02d}" for i, speaker in enumerate(unique_speakers)}
-        
-        for turn, speaker in result.speaker_diarization:
-            # Map the original speaker label to the new sequential label
-            new_speaker = speaker_mapping[speaker]
-            f.write(f"{turn.start:.3f} {turn.end:.3f} {new_speaker}\n")
+        # Handle different pyannote.audio output formats
+        if hasattr(result, 'get_timeline'):
+            # Newer pyannote.audio versions return Annotation objects
+            timeline = result.get_timeline()
+            speakers = {}
+            for segment, track, speaker in result.itertracks(yield_label=True):
+                if speaker not in speakers:
+                    speakers[speaker] = f"SPEAKER_{len(speakers)+1:02d}"
+                f.write(f"{segment.start:.3f} {segment.end:.3f} {speakers[speaker]}\n")
+        else:
+            # Older format or different structure
+            # Create a mapping from original speaker labels to sequential numbers starting from 1
+            unique_speakers = sorted(set(speaker for _, speaker in result.speaker_diarization))
+            speaker_mapping = {speaker: f"SPEAKER_{i+1:02d}" for i, speaker in enumerate(unique_speakers)}
+            
+            for turn, speaker in result.speaker_diarization:
+                # Map the original speaker label to the new sequential label
+                new_speaker = speaker_mapping[speaker]
+                f.write(f"{turn.start:.3f} {turn.end:.3f} {new_speaker}\n")

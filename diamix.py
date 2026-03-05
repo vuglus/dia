@@ -112,12 +112,34 @@ def parse_log_file(log_path):
                             'text': text.strip(),
                             'original_line': line,
                             'original_start_time': start_time_str.strip(),
-                            'original_end_time': end_time_str.strip()
+                            'original_end_time': end_time_str.strip(),
+                            'parsed': True
                         })
                     except ValueError as e:
                         print(f"Warning: Could not parse timestamp on line {line_num}: {e}")
+                        # Fallback to unparsed entry
+                        entries.append({
+                            'start_time': -1,
+                            'end_time': -1,
+                            'log_speaker': "UNKNOWN",
+                            'text': line,
+                            'original_line': line,
+                            'original_start_time': "",
+                            'original_end_time': "",
+                            'parsed': False
+                        })
                 else:
-                    print(f"Warning: Could not parse line {line_num}: {line}")
+                    # Line format not understood, keep as is
+                    entries.append({
+                        'start_time': -1,
+                        'end_time': -1,
+                        'log_speaker': "UNKNOWN",
+                        'text': line,
+                        'original_line': line,
+                        'original_start_time': "",
+                        'original_end_time': "",
+                        'parsed': False
+                    })
     
     except FileNotFoundError:
         print(f"Error: File {log_path} not found")
@@ -126,8 +148,7 @@ def parse_log_file(log_path):
         print(f"Error reading {log_path}: {e}")
         return []
     
-    # Sort entries by start time
-    entries.sort(key=lambda x: x['start_time'])
+    # Keep entries in original order (do not sort)
     return entries
 
 
@@ -136,7 +157,7 @@ def get_dia_speaker(dia_segments, start_time, end_time):
     Get the speaker from diarization segments that best matches the time range
     Returns the speaker with the maximum overlap with the given time range
     """
-    if not dia_segments:
+    if not dia_segments or start_time < 0 or end_time < 0:
         return "UNKNOWN"
     
     max_overlap = 0
@@ -205,9 +226,15 @@ def consolidate_speakers(merged_entries):
     for i in range(1, len(merged_entries)):
         next_entry = merged_entries[i]
         
+        # Skip consolidation for unparsed entries (negative times)
+        if current_entry['start_time'] < 0 or next_entry['start_time'] < 0:
+            consolidated.append(current_entry)
+            current_entry = next_entry.copy()
+            continue
+        
         # If same diarization speaker and close in time, consolidate
         time_diff = abs(next_entry['start_time'] - current_entry['end_time'])
-        if (next_entry['dia_speaker'] == current_entry['dia_speaker'] and 
+        if (next_entry['dia_speaker'] == current_entry['dia_speaker'] and
             time_diff <= 5):  # Within 5 seconds
             # Update end time to the later of the two
             current_entry['end_time'] = max(current_entry['end_time'], next_entry['end_time'])
